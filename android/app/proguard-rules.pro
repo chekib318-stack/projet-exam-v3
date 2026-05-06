@@ -1,0 +1,4 @@
+-keep class io.flutter.** { *; }
+-keep class com.boskokg.flutter_blue_plus.** { *; }
+-keepattributes *Annotation*, Signature
+-dontwarn com.google.**
