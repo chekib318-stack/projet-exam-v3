@@ -22,8 +22,9 @@ class _MagState extends State<MagneticDetectorScreen>
   // ── Signal state ──────────────────────────────────────────────────────────
   final List<double> _buf = [];       // rolling 50-sample buffer (1 second)
   static const int   _bufSize = 50;
-  double _ema      = 0.0;            // EMA-smoothed magnitude
-  double _baseline = 0.0;
+  double _ema       = 0.0;   // EMA-smoothed magnitude
+  double _magnitude = 0.0;   // raw field magnitude for display
+  double _baseline  = 0.0;
   double _gaugeVal = 0.0;           // 0.0 → 1.0 FAST responsive
   double _dispVal  = 0.0;           // smoothed display value
   bool   _calibrated = false;
