@@ -8,19 +8,19 @@ import '../core/constants.dart';
 /// ══════════════════════════════════════════════════════════════════════════════
 /// Magnetic Detector — works exactly like EMF Detector on Play Store
 ///
-/// KEY INSIGHT: EMF Detector shows RAW µT value directly from magnetometer.
+/// KEY INSIGHT: EMF Detector shows RAW uT value directly from magnetometer.
 ///   It does NOT subtract a baseline — just displays the absolute field strength.
-///   High µT = something magnetic nearby. Earth's field = 25-65 µT.
+///   High uT = something magnetic nearby. Earth's field = 25-65 uT.
 ///
 /// Our previous approach (baseline subtraction) was fundamentally wrong:
 ///   If the magnet is already there during calibration → baseline = high value
 ///   → deviation = 0 always.
 ///
 /// New approach: Raw magnitude → fixed thresholds → gauge
-///   < 65 µT   → clean (earth field only)
-///   65-100 µT → low anomaly
-///   100-200 µT→ medium anomaly
-///   > 200 µT  → strong magnetic source detected
+///   < 65 uT   → clean (earth field only)
+///   65-100 uT → low anomaly
+///   100-200 uT→ medium anomaly
+///   > 200 uT  → strong magnetic source detected
 /// ══════════════════════════════════════════════════════════════════════════════
 class MagneticDetectorScreen extends StatefulWidget {
   const MagneticDetectorScreen({super.key});
@@ -44,7 +44,7 @@ class _MagState extends State<MagneticDetectorScreen>
   double _emaMag = 0.0;   // EMA-smoothed for stable display
   double _peakMag = 0.0;  // peak value since scan started
 
-  // ── Thresholds (µT) — fixed, not relative to baseline ─────────────────────
+  // ── Thresholds (uT) — fixed, not relative to baseline ─────────────────────
   static const double _t1 = 65.0;   // earth field normal max
   static const double _t2 = 120.0;  // anomaly detected
   static const double _t3 = 250.0;  // strong source (earpiece coil range)
@@ -64,7 +64,7 @@ class _MagState extends State<MagneticDetectorScreen>
     return _MagZone.clear;
   }
 
-  // ── Gauge 0-1 mapped to 0-600 µT ──────────────────────────────────────────
+  // ── Gauge 0-1 mapped to 0-600 uT ──────────────────────────────────────────
   double get _gaugeValue => (_emaMag / _tMax).clamp(0.0, 1.0);
 
   @override
@@ -118,14 +118,14 @@ class _MagState extends State<MagneticDetectorScreen>
     final rng = Random();
     _simTimer = Timer.periodic(const Duration(milliseconds: 20), (_) {
       if (!mounted || !_scanning) { _simTimer?.cancel(); return; }
-      // Simulate earth field ~50 µT with noise
+      // Simulate earth field ~50 uT with noise
       final noise = (rng.nextDouble() - 0.5) * 4;
       _onSample(30 + noise, 35 + noise * 0.5, 20 + noise * 0.3);
     });
   }
 
   void _onSample(double x, double y, double z) {
-    // RAW MAGNITUDE — absolute total field strength in µT
+    // RAW MAGNITUDE — absolute total field strength in uT
     final mag = sqrt(x * x + y * y + z * z);
 
     // Fast EMA: alpha=0.35 → reacts quickly, still smooth
@@ -274,7 +274,7 @@ class _MagState extends State<MagneticDetectorScreen>
               style: TextStyle(color: Colors.white,
                   fontSize: 16, fontWeight: FontWeight.w900)),
           const SizedBox(height: 4),
-          Text('${_emaMag.toStringAsFixed(1)} µT — سماعة مغناطيسية أو جهاز مخفي',
+          Text('${_emaMag.toStringAsFixed(1)} uT — سماعة مغناطيسية أو جهاز مخفي',
               style: const TextStyle(color: Color(0xFFFFD600),
                   fontSize: 12, fontWeight: FontWeight.w600)),
         ])),
@@ -292,53 +292,56 @@ class _MagState extends State<MagneticDetectorScreen>
             color: c.withOpacity(0.18), blurRadius: 22, spreadRadius: 2)]),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
 
+        // Title row
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           const Text('قوة المجال المغناطيسي',
               style: TextStyle(color: Color(0xFF4A7A9B), fontSize: 11)),
           if (_peakMag > 0) Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
               color: const Color(0xFFFF6D00).withOpacity(0.12),
               borderRadius: BorderRadius.circular(6),
               border: Border.all(
                   color: const Color(0xFFFF6D00).withOpacity(0.35))),
-            child: Text('ذروة: ${_peakMag.toStringAsFixed(0)} µT',
-                style: const TextStyle(color: Color(0xFFFF6D00),
-                    fontSize: 10, fontWeight: FontWeight.w700))),
+            child: Text(
+              'ذروة: \${_peakMag.toStringAsFixed(0)} uT',
+              style: const TextStyle(color: Color(0xFFFF6D00),
+                  fontSize: 10, fontWeight: FontWeight.w700))),
         ]),
         const SizedBox(height: 8),
 
-        // ── Speedometer gauge ──────────────────────────────────────────
+        // Speedometer gauge
         SizedBox(
           height: 210,
           child: AnimatedBuilder(
             animation: _needle,
             builder: (_, __) => CustomPaint(
               painter: _EmfGaugePainter(
-                  value:    _scanning ? _needle.value : 0.0,
+                  value: _scanning ? _needle.value : 0.0,
                   scanning: _scanning),
-              child: Center(child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Big µT value — exactly like EMF Detector app
-                  Text(
-                    _scanning
-                        ? '${_emaMag.toStringAsFixed(1)}'
-                        : '--',
-                    style: TextStyle(
-                        color: c,
-                        fontSize: 60,
-                        fontWeight: FontWeight.w900,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                        shadows: [Shadow(
-                            color: c.withOpacity(0.5), blurRadius: 20)]),
-                  ),
-                  Text('µT',
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _scanning
+                          ? '\${_emaMag.toStringAsFixed(1)}'
+                          : '--',
                       style: TextStyle(
-                          color: c.withOpacity(0.7),
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700)),
-                ])))));
+                          color: c,
+                          fontSize: 60,
+                          fontWeight: FontWeight.w900,
+                          shadows: [Shadow(
+                              color: c.withOpacity(0.5),
+                              blurRadius: 20)])),
+                    Text('uT',
+                        style: TextStyle(
+                            color: c.withOpacity(0.7),
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700)),
+                  ])))),
+        ),
 
         const SizedBox(height: 6),
 
@@ -348,9 +351,9 @@ class _MagState extends State<MagneticDetectorScreen>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _lbl('0', const Color(0xFF00E676),    'نظيف'),
-              _lbl('120', const Color(0xFFFFD600),  'تنبّه'),
-              _lbl('250', const Color(0xFFFF6D00),  'خطر'),
+              _lbl('0', const Color(0xFF00E676), 'نظيف'),
+              _lbl('120', const Color(0xFFFFD600), 'تنبّه'),
+              _lbl('250', const Color(0xFFFF6D00), 'خطر'),
               _lbl('600+', const Color(0xFFFF1744), 'حرج'),
             ])),
       ]));
@@ -414,7 +417,7 @@ class _MagState extends State<MagneticDetectorScreen>
             style: TextStyle(color: c, fontSize: 13,
                 fontWeight: bold ? FontWeight.w900 : FontWeight.w600,
                 fontFamily: 'monospace')),
-        Text('µT', style: TextStyle(color: c.withOpacity(0.5), fontSize: 9)),
+        Text('uT', style: TextStyle(color: c.withOpacity(0.5), fontSize: 9)),
       ])));
 
   // ── THRESHOLDS GUIDE ──────────────────────────────────────────────────────
@@ -429,13 +432,13 @@ class _MagState extends State<MagneticDetectorScreen>
           style: TextStyle(color: AppColors.textMuted,
               fontSize: 10, letterSpacing: 0.5)),
       const SizedBox(height: 10),
-      _threshRow('< 65 µT',    '🟢 طبيعي', 'المجال المغناطيسي للأرض فقط',
+      _threshRow('< 65 uT',    '🟢 طبيعي', 'المجال المغناطيسي للأرض فقط',
           const Color(0xFF00E676)),
-      _threshRow('65–120 µT',  '🟡 منخفض', 'معدن قريب أو جهاز كهربائي',
+      _threshRow('65–120 uT',  '🟡 منخفض', 'معدن قريب أو جهاز كهربائي',
           const Color(0xFFFFD600)),
-      _threshRow('120–250 µT', '🟠 متوسط', 'مصدر مغناطيسي قوي — تحقق',
+      _threshRow('120–250 uT', '🟠 متوسط', 'مصدر مغناطيسي قوي — تحقق',
           const Color(0xFFFF6D00)),
-      _threshRow('> 250 µT',   '🔴 خطر',   'سماعة VIP Pro أو ايمان أو محرك',
+      _threshRow('> 250 uT',   '🔴 خطر',   'سماعة VIP Pro أو ايمان أو محرك',
           const Color(0xFFFF1744)),
     ]));
 
@@ -477,9 +480,9 @@ class _MagState extends State<MagneticDetectorScreen>
       ]),
       const SizedBox(height: 12),
       _tip('①', 'اضغط «ابدأ» — القراءة فورية بدون معايرة'),
-      _tip('②', 'القراءة الطبيعية في الهواء الطلق: 25-65 µT'),
-      _tip('③', 'مرّر الهاتف فوق الطالب — إذا تجاوزت 120 µT تنبّه'),
-      _tip('④', 'قراءة > 250 µT = مصدر مغناطيسي قوي — تحقق فوراً'),
+      _tip('②', 'القراءة الطبيعية في الهواء الطلق: 25-65 uT'),
+      _tip('③', 'مرّر الهاتف فوق الطالب — إذا تجاوزت 120 uT تنبّه'),
+      _tip('④', 'قراءة > 250 uT = مصدر مغناطيسي قوي — تحقق فوراً'),
       _tip('⑤', 'ابتعد عن الجدران المسلّحة والأجهزة الكهربائية'),
       const SizedBox(height: 8),
       Container(
@@ -606,10 +609,10 @@ class _EmfGaugePainter extends CustomPainter {
             ..strokeWidth = isMaj ? 2.0 : 1.0);
 
       if (isMaj) {
-        final µtVal = (i / 12 * 600).round();
+        final utVal = (i / 12 * 600).round();
         final tp = TextPainter(
           text: TextSpan(
-            text: '$µtVal',
+            text: '$utVal',
             style: const TextStyle(color: Color(0xFF4A7A9B),
                 fontSize: 9, fontWeight: FontWeight.w600)),
           textDirection: TextDirection.ltr)..layout();
