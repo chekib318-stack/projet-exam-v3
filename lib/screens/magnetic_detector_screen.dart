@@ -87,6 +87,9 @@ class _MagState extends State<MagneticDetectorScreen>
     super.dispose();
   }
 
+  static const _pollChannel =
+      MethodChannel('tn.gov.education.examguard/mag_poll');
+
   void _startScan() {
     setState(() {
       _scanning = true;
@@ -94,6 +97,7 @@ class _MagState extends State<MagneticDetectorScreen>
       _alerted = false;
     });
 
+    // Primary: EventChannel
     _sub = _channel.receiveBroadcastStream().listen(
       (data) {
         if (!mounted || !_scanning) return;
@@ -102,8 +106,36 @@ class _MagState extends State<MagneticDetectorScreen>
         final z = (data[2] as num).toDouble();
         _onSample(x, y, z);
       },
-      onError: (_) => _startSimulation(),
+      onError: (_) => _startPolling(),
     );
+
+    // Backup: if EventChannel gives 0 samples after 3s → switch to polling
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted && _scanning && _samples == 0) {
+        _startPolling();
+      }
+    });
+  }
+
+  // Polling backup — queries Kotlin every 50ms via MethodChannel
+  void _startPolling() {
+    _simTimer?.cancel();
+    _simTimer = Timer.periodic(const Duration(milliseconds: 50), (_) async {
+      if (!mounted || !_scanning) { _simTimer?.cancel(); return; }
+      try {
+        final data = await _pollChannel.invokeMethod<Map>('getMagData');
+        if (data != null) {
+          final x = (data['x'] as num).toDouble();
+          final y = (data['y'] as num).toDouble();
+          final z = (data['z'] as num).toDouble();
+          if (mounted) _onSample(x, y, z);
+        }
+      } catch (_) {
+        // Sensor really not available — use simulation
+        _simTimer?.cancel();
+        _startSimulation();
+      }
+    });
   }
 
   void _stopScan() {

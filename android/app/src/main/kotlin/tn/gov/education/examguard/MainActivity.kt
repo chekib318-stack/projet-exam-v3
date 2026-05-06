@@ -1,6 +1,5 @@
 package tn.gov.education.examguard
 
-// ALL imports must be at the top of the file in Kotlin
 import android.content.Context
 import android.content.Intent
 import android.hardware.Sensor
@@ -13,19 +12,20 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
 
-// ── Main Activity ─────────────────────────────────────────────────────────────
 class MainActivity : FlutterActivity() {
 
     companion object {
         const val METHOD_CH = "tn.gov.education.examguard/service"
         const val EVENT_CH  = "tn.gov.education.examguard/classic_bt"
         const val MAG_CH    = "tn.gov.education.examguard/magnetometer"
+        const val MAG_POLL  = "tn.gov.education.examguard/mag_poll"
     }
 
     @Volatile private var eventSink: EventChannel.EventSink? = null
     private val pendingEvents = mutableListOf<Map<String, Any>>()
     private val pendingLock   = Any()
     private var scanner: UnifiedBtScanner? = null
+    private var magHandler: MagnetometerHandler? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -44,10 +44,19 @@ class MainActivity : FlutterActivity() {
             })
 
         // ── Magnetometer EventChannel ─────────────────────────────────────
+        val mHandler = MagnetometerHandler(this)
+        magHandler   = mHandler
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, MAG_CH)
-            .setStreamHandler(MagnetometerHandler(this))
+            .setStreamHandler(mHandler)
 
-        // ── MethodChannel ─────────────────────────────────────────────────
+        // ── Magnetometer polling MethodChannel (backup) ───────────────────
+        val pollingHandler = MagPollingHandler(mHandler)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, MAG_POLL)
+            .setMethodCallHandler { call, result ->
+                result.success(pollingHandler.handleCall(call.method))
+            }
+
+        // ── BT MethodChannel ──────────────────────────────────────────────
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, METHOD_CH)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
@@ -60,9 +69,7 @@ class MainActivity : FlutterActivity() {
                         result.success(null)
                     }
                     "stopScan" -> {
-                        scanner?.stop()
-                        scanner = null
-                        result.success(null)
+                        scanner?.stop(); scanner = null; result.success(null)
                     }
                     else -> result.notImplemented()
                 }
@@ -72,12 +79,9 @@ class MainActivity : FlutterActivity() {
     private fun sendToFlutter(data: Map<String, Any>) {
         runOnUiThread {
             val sink = eventSink
-            if (sink != null) {
-                sink.success(data)
-            } else {
-                synchronized(pendingLock) {
-                    if (pendingEvents.size < 200) pendingEvents.add(data)
-                }
+            if (sink != null) sink.success(data)
+            else synchronized(pendingLock) {
+                if (pendingEvents.size < 200) pendingEvents.add(data)
             }
         }
     }
@@ -89,51 +93,8 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun stopBleService() {
-        val i = Intent(this, BleService::class.java).apply { action = BleService.ACTION_STOP }
-        startService(i)
+        startService(Intent(this, BleService::class.java).apply { action = BleService.ACTION_STOP })
     }
 
-    override fun onDestroy() {
-        scanner?.stop()
-        super.onDestroy()
-    }
-}
-
-// ── Magnetometer Handler — reads TYPE_MAGNETIC_FIELD sensor at max speed ──────
-class MagnetometerHandler(private val ctx: Context) : EventChannel.StreamHandler {
-
-    private var sensorManager: SensorManager? = null
-    private var sensor: Sensor? = null
-    private var listener: SensorEventListener? = null
-
-    override fun onListen(args: Any?, events: EventChannel.EventSink) {
-        sensorManager = ctx.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-        sensor = sensorManager?.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
-
-        if (sensor == null) {
-            events.error("NO_SENSOR", "Magnetometer not available on this device", null)
-            return
-        }
-
-        listener = object : SensorEventListener {
-            override fun onSensorChanged(event: SensorEvent) {
-                // Send [x, y, z] in µT to Flutter
-                events.success(listOf(
-                    event.values[0].toDouble(),
-                    event.values[1].toDouble(),
-                    event.values[2].toDouble()
-                ))
-            }
-            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
-        }
-
-        // SENSOR_DELAY_FASTEST ≈ 50 Hz — sufficient for audio-frequency detection
-        sensorManager?.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_FASTEST)
-    }
-
-    override fun onCancel(args: Any?) {
-        sensorManager?.unregisterListener(listener)
-        listener = null
-        sensorManager = null
-    }
+    override fun onDestroy() { scanner?.stop(); super.onDestroy() }
 }
