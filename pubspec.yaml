@@ -1,0 +1,40 @@
+name: examguard
+description: رصد أجهزة الغش الإلكتروني - وزارة التربية تونس
+publish_to: none
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  flutter_blue_plus: ^1.35.3
+  permission_handler: ^11.3.1
+  audioplayers: ^6.1.0
+  vibration: ^2.0.0
+  sqflite: ^2.3.3
+  path: ^1.9.0
+  crypto: ^3.0.3
+  shared_preferences: ^2.3.2
+  intl: ^0.19.0
+  url_launcher: ^6.3.0
+  sensors_plus: ^6.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  generate: true
+  assets:
+    - assets/beep_low.mp3
+    - assets/beep_mid.mp3
+    - assets/beep_high.mp3
+    - assets/beep_critical.mp3
+    - assets/ministry_logo.png
+    - assets/ministry_logo_sm.png
