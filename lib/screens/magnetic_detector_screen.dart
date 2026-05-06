@@ -305,7 +305,7 @@ class _MagState extends State<MagneticDetectorScreen>
               border: Border.all(
                   color: const Color(0xFFFF6D00).withOpacity(0.35))),
             child: Text(
-              'ذروة: \${_peakMag.toStringAsFixed(0)} uT',
+              'ذروة: ${_peakMag.toStringAsFixed(0)} uT',
               style: const TextStyle(color: Color(0xFFFF6D00),
                   fontSize: 10, fontWeight: FontWeight.w700))),
         ]),
@@ -313,7 +313,7 @@ class _MagState extends State<MagneticDetectorScreen>
 
         // Speedometer gauge
         SizedBox(
-          height: 210,
+          height: 180,
           child: AnimatedBuilder(
             animation: _needle,
             builder: (_, __) => CustomPaint(
@@ -326,11 +326,11 @@ class _MagState extends State<MagneticDetectorScreen>
                   children: [
                     Text(
                       _scanning
-                          ? '\${_emaMag.toStringAsFixed(1)}'
+                          ? '${_emaMag.toStringAsFixed(1)}'
                           : '--',
                       style: TextStyle(
                           color: c,
-                          fontSize: 60,
+                          fontSize: 48,
                           fontWeight: FontWeight.w900,
                           shadows: [Shadow(
                               color: c.withOpacity(0.5),
