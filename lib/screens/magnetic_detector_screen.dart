@@ -160,9 +160,11 @@ class _MagState extends State<MagneticDetectorScreen>
     // RAW MAGNITUDE — absolute total field strength in uT
     final mag = sqrt(x * x + y * y + z * z);
 
-    // Fast EMA: alpha=0.35 → reacts quickly, still smooth
-    // This mimics EMF Detector's responsive needle
-    _emaMag = _emaMag == 0.0 ? mag : 0.35 * mag + 0.65 * _emaMag;
+    // Asymmetric EMA — rises fast, falls fast
+    // alpha_rise = 0.40 (quick response when approaching)
+    // alpha_fall = 0.70 (fast decay when moving away)
+    final alpha = mag > _emaMag ? 0.40 : 0.70;
+    _emaMag = _emaMag == 0.0 ? mag : alpha * mag + (1 - alpha) * _emaMag;
 
     // Animate needle to new gauge value
     _needle.animateTo(_gaugeValue,
